@@ -4,7 +4,7 @@
 #'
 #' @description
 #' Transform [TaskSurv] to [TaskRegr][mlr3::TaskRegr] using the **P**seudo
-#' **V**alue (PV) methody by ----
+#' **V**alue (PV) methody.
 #'
 #' THEORIE
 #'
@@ -45,14 +45,14 @@
 #'
 #' @export
 PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
-  inherit = mlr3pipelines::PipeOP,
+  inherit = mlr3pipelines::PipeOp,
 
   public = list(
     #' @description
     #' Creates a new instance of this [R6][R6::R6Class] class.
     initialize = function(id = "trafotask_survregr_pv") {
-      param_set = ps(
-        tau = p_dbl(0)
+      param_set = paradox::ps(
+        tau = paradox::p_dbl(0)
       )
 
       super$initialize(
@@ -77,10 +77,11 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       task = input[[1L]]     # task entspricht der zugeordneten Aufgabe !!!
                              # Also alles in dieser Funktion mit task bezieht sich auf die Aufgabe
                              # Bsp.: task = tsk("lung")
-      psv = self$param_set
+      psv = self$param_set$values
+      tau = psv$tau
 
       # checks: Checking if tau is really part of [0, T]:
-      check_tau = assertNumber(psv$tau, null.ok = FALSE)
+      check_tau = checkmate::assertNumber(tau, null.ok = FALSE)
       max_event_time = max(task$unique_event_times())
       stopifnot(tau <= max_event_time)
 
@@ -129,7 +130,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
 
       # create regression task:
       task_pv = TaskRegr$new(id = paste0(task$id, "_PV"), backend = data,
-                             target = pv)
+                             target = "pv")
 
       # keep this in the state to show that pipeop was trained
       self$state = list()
@@ -142,12 +143,15 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       times = task$times()
       status = task$status()
       data = task$data()
-      survival_var = task$target_names()[1]
-      rmst_var = task$target_names()[2]
-      ci_var = task$target_names()[3]
+      survival_var = task$target_names[1]
+      rmst_var = task$target_names[2]
+      ci_var = task$target_names[3]
+      psv = self$param_set$values
+      tau = psv$tau
+
       # -> Hier kommt es auf die Definition der target-names an --> gibt es nur ein oder mehrere
       # Vermutung: 1.) Survival Probability; 2.) RMST; 3.) Cumulative-incidenc (CI)
-      tau = assertNumeric(self$param_set$tau, null.ok = FALSE)
+      tau = checkmate::assertNumeric(tau, null.ok = FALSE)
 
       # ...
       # ...
@@ -166,3 +170,4 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
     }
   )
 )
+
