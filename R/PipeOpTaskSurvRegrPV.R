@@ -20,7 +20,12 @@
 #' ```
 #'
 #' @section Input and Output Channels:
+#' [PipeOpTaskSurvRegrPV] has one input channel named "input", and two
+#' ouput channels, one named "output" and the other named "data".
 #'
+#' Training transforms the "input" [TaskSurv] to as [TaskRegr][mlr3::TaskRegr],
+#' which is the output.
+#' TODO: OUTPUT BESCHREIBEN
 #'
 #'
 #' @section Parameters:
@@ -49,6 +54,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       param_set = ps(
         tau = p_dbl(0)
       )
+
       super$initialize(
         id = id,
         param_set = param_set,
