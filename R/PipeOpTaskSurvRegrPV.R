@@ -100,27 +100,53 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       # is right-censored) are replaced by tau itself.
       # Getting KM(t) at time tau:
       # KM_tau = summary(global_KM_fit, times = tau)$surv
+      KM_tau = summary(global_KM_fit, time = tau)[6]
 
-      # Calculating the LOO:
+      # Calculating PV:
       data = task$data()
       n = nrow(data)
       # 1.) Calculating the Risk-set:
-      risk_set = sum(ifelse(times >= tau, 1, 0))
+      # risk_set = sum(ifelse(times >= tau, 1, 0))
+      # 1.) Initilaizing risk-sets:
+      risk_set = vector("numeric", length = tau)
       # 2.) Calculating the number of event times:
-      event_times = sum(ifelse(times == tau & status == 1, 1, 0))
+      # event_times = sum(ifelse(times == tau & status == 1, 1, 0))
+      # 2.) Initializing number of event times:
+      event_times = vector("numeric", length = tau)
       # 3.) Calculating leave-one-out numbers:
-      risk_set_loo = vector("numeric", length = n)
-      event_times_loo = vector("numeric", length = n)
+      risk_set_loo = matrix(0, nrow = n, ncol = tau)
+      event_times_loo = matrix(0, nrow = n, ncol = tau)
+      factors = matrix(0, nrow = n, ncol = tau)
+      # Given a matrix with: rows = ids(i) and cols = times(s)
       km = vector("numeric", length = n)
       for(i in seq_along(1:n)) {
-         risk_set_loo[i] = risk_set - ifelse(times[i] >= tau, 1, 0)
-         event_times_loo[i] = event_times - ifelse(times[i] == tau & status[i] == 1, 1, 0)
-         km[i] = prod((risk_set_loo[i] - event_times_loo[i]) / risk_set_loo[i])
-         # TODO: RECHNUNG NOCHMAL DURCHGEHEN !!!
+        for(s in seq_along(1:tau)) {
+          risk_set[s] = sum(ifelse(times >= s, 1, 0))
+          event_times[s] = sum(ifelse(times == s & status == 1, 1, 0))
+
+
+          # Risk-sets and event-times loo:
+          risk_set_loo[i, s] = risk_set[s] - ifelse(times[i] >= s, 1, 0)
+          event_times_loo[i, s] = event_times[s] - ifelse(times[i] == s & status[i] == 1, 1, 0)
+
+          # KM LOO estimator:
+          factors[i, s] = event_times_loo[i, s] / risk_set_loo[i, s]
+          km[i] = prod(1 - factors, na.rm = TRUE)
+
+
+
+          risk_set_loo[s] = risk_set - sum(ifelse(times[i] >= s, 1, 0))
+          # risk_set_loo[i] = risk_set - ifelse(times[i] >= tau, 1, 0)
+          event_times_loo[s] = event_times - sum(ifelse(times[i] == s & status[i] == 1, 1, 0))
+          # event_times_loo[i] = event_times - ifelse(times[i] == tau & status[i] == 1, 1, 0)
+          km[i] = prod((risk_set_loo[i] - event_times_loo[i]) / risk_set_loo[i])
+          # TODO: RECHNUNG NOCHMAL DURCHGEHEN !!!
+        }
       }
+
       pv = vector("numeric", length = n)
       for(i in seq_along(1:n)) {
-         pv[i] = n * global_KM_surv - (n - 1) * km[i]
+         pv[i] = n * KM_tau[[1]] - (n - 1) * km[i]
       }
 
       # add pseudo-values to original data:
@@ -143,6 +169,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       times = task$times()
       status = task$status()
       data = task$data()
+      pv = task$pv
       survival_var = task$target_names[1]
       rmst_var = task$target_names[2]
       ci_var = task$target_names[3]
@@ -153,11 +180,12 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       # Vermutung: 1.) Survival Probability; 2.) RMST; 3.) Cumulative-incidenc (CI)
       tau = checkmate::assertNumeric(tau, null.ok = FALSE)
 
+      data["pv"] = pv
       # ...
       # ...
       # Create regression task
       task_regr = TaskRegr$new(id = paste0(task$id, "_PV"), backend = data,
-                               target = "pv", positive = "1")
+                               target = "pv")
       # keep original data
       # TODO: NACHSCHAUEN, OB DIES SO STIMMT
       data = list(
