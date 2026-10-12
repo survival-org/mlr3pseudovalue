@@ -6,8 +6,20 @@
 #' Transform [TaskSurv] to [TaskRegr][mlr3::TaskRegr] using the **P**seudo
 #' **V**alue (PV) methody.
 #'
-#' THEORIE
+#' The pseudo values give a new target variable which can be used for normal
+#' regression learners. For the calculation of these pseudo values, this fomular is
+#' used (SOURCE ?):
 #'
+#' \eqn{\theta_i}(t) = n \times \eqn{\theta}(t) - (n - 1) \times \eqn{\theta}(t)^(-i)
+#'
+#' For the two target values: S(t|x) and RMST(t), the nonparametric Kaplan-Meier
+#' estimation for S(t) is used for \eqn{\theta}(t). The calculation takes two parts:
+#' 1.) The global KM-estimator at time point \tau is calculated.
+#' 2.) The LOO KM-estimator at time point \tau is calculated for each observation
+#' i = 1,..., n.
+#' Both of these steps are implemented in the training step. While for the global
+#' KM-estimator the *survival* package is used, the LOO KM-estimator is calculated
+#' seperated.
 #'
 #' @section Dictionary:
 #' This [PipeOP][mlr3pipelines::PipeOP] can be instantiated via the
@@ -100,30 +112,34 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       # is right-censored) are replaced by tau itself.
       # Getting KM(t) at time tau:
       # KM_tau = summary(global_KM_fit, times = tau)$surv
-      KM_tau = summary(global_KM_fit, time = tau)[6]
+      KM_tau = summary(global_KM_fit, time = tau)[6]$surv
 
       # Calculating PV:
       data = task$data()
       n = nrow(data)
       # 1.) Calculating the Risk-set:
       # risk_set = sum(ifelse(times >= tau, 1, 0))
-      # 1.) Initilaizing risk-sets:
+
+      # 1.) Setting risk-sets:
       risk_set = vector("numeric", length = tau)
       # 2.) Calculating the number of event times:
       # event_times = sum(ifelse(times == tau & status == 1, 1, 0))
-      # 2.) Initializing number of event times:
+
+      # 2.) Setting number of event times:
       event_times = vector("numeric", length = tau)
+
       # 3.) Calculating leave-one-out numbers:
+      # Creating matrices with: rows = ids(i) and cols = times(s)
       risk_set_loo = matrix(0, nrow = n, ncol = tau)
       event_times_loo = matrix(0, nrow = n, ncol = tau)
       factors = matrix(0, nrow = n, ncol = tau)
-      # Given a matrix with: rows = ids(i) and cols = times(s)
       km = vector("numeric", length = n)
       for(i in seq_along(1:n)) {
         for(s in seq_along(1:tau)) {
-          risk_set[s] = sum(ifelse(times >= s, 1, 0))
-          event_times[s] = sum(ifelse(times == s & status == 1, 1, 0))
-
+          browser()
+          # Calculating Risk-set and number of events per time-point s:
+          risk_set[s] = sum(as.integer(times >= s))
+          event_times[s] = sum(as.integer(times == s & status == 1))
 
           # Risk-sets and event-times loo:
           risk_set_loo[i, s] = risk_set[s] - ifelse(times[i] >= s, 1, 0)
@@ -135,11 +151,11 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
 
 
 
-          risk_set_loo[s] = risk_set - sum(ifelse(times[i] >= s, 1, 0))
+          # risk_set_loo[s] = risk_set - sum(ifelse(times[i] >= s, 1, 0))
           # risk_set_loo[i] = risk_set - ifelse(times[i] >= tau, 1, 0)
-          event_times_loo[s] = event_times - sum(ifelse(times[i] == s & status[i] == 1, 1, 0))
+          # event_times_loo[s] = event_times - sum(ifelse(times[i] == s & status[i] == 1, 1, 0))
           # event_times_loo[i] = event_times - ifelse(times[i] == tau & status[i] == 1, 1, 0)
-          km[i] = prod((risk_set_loo[i] - event_times_loo[i]) / risk_set_loo[i])
+          # km[i] = prod((risk_set_loo[i] - event_times_loo[i]) / risk_set_loo[i])
           # TODO: RECHNUNG NOCHMAL DURCHGEHEN !!!
         }
       }
@@ -148,6 +164,15 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       for(i in seq_along(1:n)) {
          pv[i] = n * KM_tau[[1]] - (n - 1) * km[i]
       }
+
+      # If target is RMST(x|t) -> Andersen 2010:
+      # TODO: WIE KANN MAN RMST ALS TARGET IDENTIFIZIEREN ?
+      for(i in seq_along(1:n)) {
+          pv[i] = integrate(function(x) {
+                      n * KM_tau[[1]] - (n - 1) * km[i]
+                    }, lower = 0, upper = tau)
+      }
+
 
       # add pseudo-values to original data:
       data[["pv"]] = pv
