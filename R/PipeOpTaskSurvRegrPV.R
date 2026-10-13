@@ -8,9 +8,9 @@
 #'
 #' The pseudo values give a new target variable which can be used for normal
 #' regression learners. For the calculation of these pseudo values, this fomular is
-#' used (SOURCE ?):
+#' used (Bender et al. 2026):
 #'
-#' \eqn{\theta_i}(t) = n \times \eqn{\theta}(t) - (n - 1) \times \eqn{\theta}(t)^(-i)
+#' \eqn{\theta_i} = n \times \eqn{\theta} - (n - 1) \times \eqn{\theta}^(-i)
 #'
 #' For the two target values: S(t|x) and RMST(t), the nonparametric Kaplan-Meier
 #' estimation for S(t) is used for \eqn{\theta}(t). The calculation takes two parts:
@@ -37,7 +37,9 @@
 #'
 #' Training transforms the "input" [TaskSurv] to as [TaskRegr][mlr3::TaskRegr],
 #' which is the output.
-#' TODO: OUTPUT BESCHREIBEN
+#' The target column is called `"pv"` and contain the single pseudo-values for
+#' all observations i.
+#'
 #'
 #'
 #' @section Parameters:
