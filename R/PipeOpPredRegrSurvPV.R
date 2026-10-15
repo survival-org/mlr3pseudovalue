@@ -44,7 +44,7 @@ PipeOpPredRegrSurvPV <- R6Class(
         name = c("input", "data"),
         train = c("NULL", "data.table"),
         predict = c("PredictionRegr", "data.table")
-        # TODO: NACHSCHAUEN, ob Prediction wirklich Liste ist oder doch ein Data Table !
+    #   TODO: NACHSCHAUEN, ob Prediction wirklich Liste ist oder doch ein Data Table !
         ),
       ouput = data.table(
         name = "output",
