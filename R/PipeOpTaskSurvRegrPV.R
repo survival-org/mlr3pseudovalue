@@ -196,20 +196,20 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       times = task$times()
       status = task$status()
       data = task$data()
-      pv = task$pv
-      survival_var = task$target_names[1]
-      rmst_var = task$target_names[2]
-      ci_var = task$target_names[3]
-      psv = self$param_set$values
-      tau = psv$tau
+      time_var = task$target_names[1]
+      status_var = task$target_names[2]
+      tau = self$paramet_set$values$tau
+      # pv = task$pv
+      # survival_var = task$target_names[1]
+      # rmst_var = task$target_names[2]
+      # ci_var = task$target_names[3]
+      # psv = self$param_set$values
+      # tau = psv$tau
 
-      # -> Hier kommt es auf die Definition der target-names an --> gibt es nur ein oder mehrere
-      # Vermutung: 1.) Survival Probability; 2.) RMST; 3.) Cumulative-incidenc (CI)
       tau = checkmate::assertNumeric(tau, null.ok = FALSE)
 
-      data["pv"] = pv
-      # ...
-      # ...
+      # TODO: Cutoff (defining censoring after tau)
+
       # Create regression task
       task_regr = TaskRegr$new(id = paste0(task$id, "_PV"), backend = data,
                                target = "pv")
