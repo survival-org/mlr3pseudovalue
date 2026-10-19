@@ -61,8 +61,15 @@ PipeOpPredRegrSurvPV <- R6Class(
 
     private = list(
       .predict = function(input) {
-        pred = input[[1L]] # Regression Prediction
-        data = input[[2L]] # Data - for prediction (?)
+        # TODO: MEHR NACHVOLLZIEHEN
+        pred = input[[1]] # Regression Prediction
+        data = input[[2]] # Data - for prediction (?)
+
+        # TODO: NACHSCHAUEN; WIE PREDICTION ABGEBILDET WERDEN
+        p = PredictionSurv$new(
+          row_ids = data$row_ids(),
+          true = Surv(data$times, data$status)
+        )
 
       },
 
