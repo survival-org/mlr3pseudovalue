@@ -1,10 +1,11 @@
 #' @title PipeOpPredRegrSurvPV
-#' @name mlr_pipeops_trafopred_classifsurv_disctime
+#' @name mlr_pipeops_trafopred_regrsurv_pv
 #'
 #' @description
-#' Transform [PredictionRegr][mlr3::PredictionRegr] to [PredictionSurv] by
-#'
-#'
+#' Transform [PredictionRegr][mlr3::PredictionRegr] to [PredictionSurv].
+#' As the PV-reduction directly uses the survival quantity for a regression task,
+#' the prediction out of the regression model can be used directly.
+#' TODO: QUELLE HINZUFÜGEN.
 #'
 #' @section Dictionary:
 #' This [PipeOp][mlr3pipelines::PipeOp] can be instantiated via the
@@ -62,15 +63,29 @@ PipeOpPredRegrSurvPV <- R6Class(
     private = list(
       .predict = function(input) {
         # TODO: MEHR NACHVOLLZIEHEN
+        # Input = Liste mit: RegressionPrediction und Data_test
         pred = input[[1]] # Regression Prediction
-        data = input[[2]] # Data - for prediction (?)
+        data = input[[2]] # TestData
 
-        # TODO: NACHSCHAUEN; WIE PREDICTION ABGEBILDET WERDEN
+        # TODO: CHECKEN; OB DAS SO STIMMT.
+        # Überlegung: Pred gibt enviroment von PredictionRegr wieder
+        # -> Field pv (da reponse variable) sollte exisiteren -->
+        # damit lässt sich Matrix bilden, mit Spalte = t, Zeilen = pv.
+        # QUELLE NOCH HINZUFÜGEN FÜR DIESE Erklärung
+        # PredictionSurv - help-side,
+        surv = matrix(data = pred$pv, ncol = 1)
+        colnames(surv) = data$tau
+
+        # Prediction of Regression Task gives directly the prediction for
+        # Survival Task
         p = PredictionSurv$new(
           row_ids = data$row_ids(),
-          true = Surv(data$times, data$status)
+          true = Surv(data$times, data$status),
+          distr = surv,
+        # lp = ?
         )
 
+        list(p)
       },
 
       .train = function(input) {
