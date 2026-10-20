@@ -13,13 +13,15 @@
 #' or with the associated sugar function [mlr3pipelines::po()]:
 #' ```
 #' PipeOpPredRegrSurvPV$new()
-#' mlr_pipeops$get("---")
-#' po("---")
+#' mlr_pipeops$get("trafopred_regrsurv_pv")
+#' po("trafopred_regrsurv_pv")
 #' ```
 #'
 #' @section Input and Output Channels:
 #' The input is a [PredictionRegr][mlr3::PredictionRegr] and a
-#' ---- .
+#' [data.table][data.table::data.table] containing .... .
+#'
+#'
 #' The output is the input [PredictionRegr][mlr3::PredictionRegr]
 #' transformed to a [PredictionSurv].
 #' Only works during prediction phase.
@@ -30,8 +32,7 @@
 #' @family Transformation PipeOps
 #' EVTL EXAMPLE CODE
 #' @export
-PipeOpPredRegrSurvPV <- R6Class(
-  "PipeOpPredRegrSurvPV",
+PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
   inherit = mlr3pipelines::PipeOp,
 
   public = list(
@@ -43,17 +44,18 @@ PipeOpPredRegrSurvPV <- R6Class(
       id = id,
       input = data.table(
         name = c("input", "data"),
-        train = c("NULL", "data.table"),
-        predict = c("PredictionRegr", "data.table")
+        train = c("NULL", "NULL"),
+        predict = c("PredictionRegr", "list")
     #   TODO: NACHSCHAUEN, ob Prediction wirklich Liste ist oder doch ein Data Table !
         ),
-      ouput = data.table(
+      output = data.table(
         name = "output",
         train = "NULL",
         predict = "PredictionSurv"
         )
       )
-    },
+    }
+  ),
 
     # Überlegen, ob hier active function wirklich gebraucht wird (ist Predictiontype "crank" ? )
     # active = function(
@@ -92,7 +94,5 @@ PipeOpPredRegrSurvPV <- R6Class(
         self$state = list()
         list(input)
       }
-    )
   )
 )
-
