@@ -58,6 +58,8 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
   ),
 
     # Überlegen, ob hier active function wirklich gebraucht wird (ist Predictiontype "crank" ? )
+    # active soll active prediction type von PipeOp wiedergeben !!!
+    # Prediction types: reponse; distr; lp; crank
     # active = function(
     #
     # ),
