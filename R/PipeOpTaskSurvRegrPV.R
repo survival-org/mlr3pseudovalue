@@ -49,6 +49,11 @@
 #' Predefined time point for PV. Observations with time larger than \eqn{\tau} are (right-)censored.
 #' Must be less or equal to the maximum event time.
 #'
+#' (* `prediction_type` :: `factor()`\cr
+#'
+#'
+#' )
+#'
 #' @references
 #' `r format_bib(".....")`
 #'
@@ -107,10 +112,15 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       tau = psv$tau
       predict_type = psv$predict_type
 
-      # checks: Checking if tau is really part of [0, T]:
+      # checks:
+      # checking if tau is really part of [0, T]:
       check_tau = checkmate::assertNumber(tau, null.ok = FALSE)
       max_event_time = max(task$unique_event_times())
       stopifnot(tau <= max_event_time)
+
+      # checking if predict_type is part of set:
+      check_predict_type = checkmate::assertChoice(predict_type, c("survival", "rmst")) #, #etc.))
+
 
       # calculate the censoring variable:
       cut_times = times
@@ -127,7 +137,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       # ci_pv <- pseudo::pseudoci(times, status, tau)
       # }
 
-      # Idea: Checking type of target through prediction_type:
+      # Idea: Determinating type of target through prediction_type:
       if (identical(predict_type, "survival")) {
         pv <- pseudo::pseudosurv(times, status, tau)$pseudo
       }
