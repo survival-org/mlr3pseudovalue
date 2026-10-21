@@ -71,7 +71,9 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
     #' Creates a new instance of this [R6][R6::R6Class] class.
     initialize = function(id = "trafotask_survregr_pv") {
       param_set = paradox::ps(
-        tau = paradox::p_dbl(0)
+        tau = paradox::p_dbl(0),
+        # option: prediction_type as Hp to determine the type of target ?
+        predict_type = paradox::p_fct(levels = c("survival", "rmst")) # etc.))
       )
 
       super$initialize(
@@ -103,6 +105,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       cens_var = task$target_names[2]
       psv = self$param_set$values
       tau = psv$tau
+      predict_type = psv$predict_type
 
       # checks: Checking if tau is really part of [0, T]:
       check_tau = checkmate::assertNumber(tau, null.ok = FALSE)
@@ -115,22 +118,29 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
 
       # Calculate PV:
 
-      # TODO: USE Implementation from PSEUDO package !!!
-
       # Output list with: 1.) ordered time points; 2.) PV values for each i
-      surv_prob_pv <- pseudo::pseudosurv(times, status, tau)$pseudo
-      rmst_pv <- pseudo::pseudomean(times, status, tau)
+      # surv_prob_pv <- pseudo::pseudosurv(times, status, tau)$pseudo
+      # rmst_pv <- pseudo::pseudomean(times, status, tau)
       # given better output:
-      rmst_data <- cbind(data, pseudo = rmst_pv, id = 1:nrow(data))
-      if (length(status > 2)) {
-      ci_pv <- pseudo::pseudoci(times, status, tau)
+      # rmst_data <- cbind(data, pseudo = rmst_pv, id = 1:nrow(data))
+      # if (length(status > 2)) {
+      # ci_pv <- pseudo::pseudoci(times, status, tau)
+      # }
+
+      # Idea: Checking type of target through prediction_type:
+      if (identical(predict_type, "survival")) {
+        pv <- pseudo::pseudosurv(times, status, tau)$pseudo
       }
+      if (identical(predict_type, "rmst")) {
+        pv <- pseudo::pseudomean(times, status, tau)
+      }
+      # etc.
 
       # add pseudo-values to original data:
       data[["pv"]] = pv
       # remove time and status target:
       data[[time_var]] = NULL
-      data[[status_var]] = NULL
+      data[[cens_var]] = NULL
 
       # create regression task:
       task_pv = TaskRegr$new(id = paste0(task$id, "_PV"), backend = data,
