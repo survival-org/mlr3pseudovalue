@@ -167,14 +167,28 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       data = task$data()
       time_var = task$target_names[1]
       status_var = task$target_names[2]
-      tau = self$paramet_set$values$tau
+      psv_predict = self$param_set$values
+      tau_predict = psv_predict$tau
+      predict_type_predict = psv_predict$predict_type
 
-      tau = checkmate::assertNumeric(tau, null.ok = FALSE)
+      checkmate::assertNumeric(tau_predict, null.ok = FALSE)
 
+      # setting new target: pv:
+      times = task$times()
+      status = task$status()
+      if (identical(predict_type_predict, "survival")) {
+        pv <- pseudo::pseudosurv(times, status, tau)$pseudo
+      }
+      if (identical(predict_type_predict, "rmst")) {
+        pv <- pseudo::pseudomean(times, status, tau)
+      }
       # remove time and status target:
       data[[time_var]] = NULL
       data[[status_var]] = NULL
-      # Create regression task
+      # add pseudo-values to original data:
+      data[["pv"]] = pv
+
+      # create regression task
       task_regr = TaskRegr$new(id = paste0(task$id, "_PV"), backend = data,
                                target = "pv")
 
@@ -183,9 +197,11 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
         row_ids = task$row_ids,
         times = task$times(),
         status = task$status(),
-        tau = tau
+        tau = tau_predict
       )
       list(task_regr, data)
     }
   )
 )
+
+
