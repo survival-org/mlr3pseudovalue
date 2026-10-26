@@ -4,22 +4,19 @@
 #'
 #' @description
 #' Transform [TaskSurv] to [TaskRegr][mlr3::TaskRegr] using the **P**seudo
-#' **V**alue (PV) methody.
+#' **V**alue (PV) method.
 #'
-#' The pseudo values give a new target variable which can be used for normal
-#' regression learners. For the calculation of these pseudo values, this fomular is
-#' used (Bender et al. 2026):
+#' The pseudo values give a new target variable which can be used for classical
+#' regression learners. For the calculation of these pseudo values, this formular is
+#' used (Piller et al., 2026):
 #'
 #' \eqn{\theta_i} = n \times \eqn{\theta} - (n - 1) \times \eqn{\theta}^(-i)
 #'
-#' For the two target values: S(t|x) and RMST(t), the nonparametric Kaplan-Meier
-#' estimation for S(t) is used for \eqn{\theta}(t). The calculation takes two parts:
-#' 1.) The global KM-estimator at time point \tau is calculated.
-#' 2.) The LOO KM-estimator at time point \tau is calculated for each observation
-#' i = 1,..., n.
-#' Both of these steps are implemented in the training step. While for the global
-#' KM-estimator the *survival* package is used, the LOO KM-estimator is calculated
-#' seperated.
+#' In order to calculate the pseudo values, the class uses the build-in functions from
+#' the package *pseudo*. Different functions for the different target variables exist
+#' in this package and are called within this Pipeoperation class.
+#' For more in-detail information on the *pseudo* package see:
+#' \url{https://CRAN.R-project.org/package=pseudo}.
 #'
 #' @section Dictionary:
 #' This [PipeOP][mlr3pipelines::PipeOP] can be instantiated via the
@@ -33,14 +30,18 @@
 #'
 #' @section Input and Output Channels:
 #' [PipeOpTaskSurvRegrPV] has one input channel named "input", and two
-#' ouput channels, one named "output" and the other named "data".
+#' output channels, one named "output" and "data".
 #'
-#' Training transforms the "input" [TaskSurv] to as [TaskRegr][mlr3::TaskRegr],
+#' Training transforms the "input" [TaskSurv] to a [TaskRegr][mlr3::TaskRegr],
 #' which is the output.
-#' The target column is called `"pv"` and contain the single pseudo-values for
-#' all observations i.
+#' The target column is called `"pv"` and contain the pseudo-values for
+#' all observations i. The time and censoring variable are removed as
+#' targets.
 #'
-#'
+#' During prediction the "input" [TaskSurv] is transformed to a [TaskRegr][mlr3::TaskRegr]
+#' with `"pv"` as the target. The "data" is a data.table[data.table::data.table], which contains the
+#' `row_ids`, the time `times` \eqn{t_i} and the status variable `censoring` \eqn{\delta_i}.
+#' This "data" is only meant to be used with the [PipeOpPredRegrSurvPV].
 #'
 #' @section Parameters:
 #' The parameters are:
@@ -49,13 +50,13 @@
 #' Predefined time point for PV. Observations with time larger than \eqn{\tau} are (right-)censored.
 #' Must be less or equal to the maximum event time.
 #'
-#' (* `prediction_type` :: `factor()`\cr
-#'
-#'
-#' )
+#' * `prediction_type` :: `factor()`\cr
+#' This variable let define the quantity which should be used as a target. It has to be a character string
+#' out of this set: {"survival", "rmst", ...}.
+#' ...
 #'
 #' @references
-#' `r format_bib(".....")`
+#' `r format_bib("piller_2026")`
 #'
 #' @seealso
 #' @family Transformation PipeOps
@@ -63,11 +64,6 @@
 #' # example code
 #'
 #' @export
-#'
-#'
-#'
-#'
-#'
 PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
   inherit = mlr3pipelines::PipeOp,
 
@@ -100,9 +96,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
 
   private = list(
     .train = function(input) {
-      task = input[[1L]]     # task entspricht der zugeordneten Aufgabe !!!
-                             # Also alles in dieser Funktion mit task bezieht sich auf die Aufgabe
-                             # Bsp.: task = tsk("lung")
+      task = input[[1L]]
       data = task$data()
       times = task$times()
       status = task$status()
@@ -113,7 +107,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       predict_type = psv$predict_type
 
       # checks:
-      # checking if tau is really part of [0, T]:
+      # checking if tau is really part of [0, t_max]:
       check_tau = checkmate::assertNumber(tau, null.ok = FALSE)
       max_event_time = max(task$unique_event_times())
       stopifnot(tau <= max_event_time)
@@ -126,18 +120,9 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       cut_times = times
       cut_times[cut_times > tau] = tau
 
-      # Calculate PV:
+      # calculate pv:
 
-      # Output list with: 1.) ordered time points; 2.) PV values for each i
-      # surv_prob_pv <- pseudo::pseudosurv(times, status, tau)$pseudo
-      # rmst_pv <- pseudo::pseudomean(times, status, tau)
-      # given better output:
-      # rmst_data <- cbind(data, pseudo = rmst_pv, id = 1:nrow(data))
-      # if (length(status > 2)) {
-      # ci_pv <- pseudo::pseudoci(times, status, tau)
-      # }
-
-      # Idea: Determinating type of target through prediction_type:
+      # idea: determine type of target through prediction_type:
       if (identical(predict_type, "survival")) {
         pv <- pseudo::pseudosurv(times, status, tau)$pseudo
       }
@@ -204,4 +189,4 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
   )
 )
 
-
+# register_pipeop("trafotask_survregr_pv", PipeOpTaskSurvRegrPV)
