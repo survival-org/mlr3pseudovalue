@@ -1,0 +1,44 @@
+Package: mlr3pseudovalue
+Title: Pseudo-Value Reduction Pipeline Operators for 'mlr3proba'
+Version: 0.0.0.9000
+Authors@R: c(
+    person("Bela", "Hassan", , "Laurin.Hassan@campus.lmu.de", role = "aut"),
+    person("Andreas", "Bender", , "bender.at.R@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0001-5628-8611"))
+  )
+Description: Extends the 'mlr3proba' survival ecosystem with the pseudo-value
+    reduction: survival times are replaced by pseudo-observations, the
+    jackknife contributions of a non-parametric estimator of the survival
+    probability or of the restricted mean survival time at one or more fixed
+    time points. Pipeline operators turn a survival task into a regression
+    task on these pseudo-values and map the regression predictions back to a
+    survival prediction, so that any regression learner can be used for
+    time-to-event data.
+License: LGPL-3
+URL: https://github.com/survival-org/mlr3pseudovalue
+BugReports: https://github.com/survival-org/mlr3pseudovalue/issues
+Depends:
+    mlr3 (>= 1.2.0),
+    mlr3proba (>= 0.8.0),
+    R (>= 4.1.0)
+Imports:
+    checkmate,
+    data.table,
+    mlr3misc (>= 0.19.0),
+    mlr3pipelines (>= 0.7.0),
+    R6,
+    stats
+Suggests:
+    knitr,
+    mlr3learners,
+    pseudo,
+    rmarkdown,
+    survival,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+Collate:
+    'aaa.R'
+    'zzz.R'
+Config/roxygen2/version: 8.1.0
