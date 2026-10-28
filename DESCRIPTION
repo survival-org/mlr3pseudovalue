@@ -40,5 +40,7 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Collate:
     'aaa.R'
+    'PipeOpPredRegrSurvPV.R'
+    'PipeOpTaskSurvRegrPV.R'
     'zzz.R'
 Config/roxygen2/version: 8.1.0
