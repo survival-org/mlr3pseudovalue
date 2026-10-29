@@ -7,7 +7,7 @@
 #' **V**alue (PV) method.
 #'
 #' The pseudo values give a new target variable which can be used for classical
-#' regression learners. For the calculation of these pseudo values, this formular is
+#' regression learners. For the calculation of these pseudo values, this fomular is
 #' used (Piller et al., 2026):
 #'
 #' \eqn{\theta_i} = n \times \eqn{\theta} - (n - 1) \times \eqn{\theta}^(-i)
@@ -50,10 +50,10 @@
 #' Predefined time point for PV. Observations with time larger than \eqn{\tau} are (right-)censored.
 #' Must be less or equal to the maximum event time.
 #'
-#' * `prediction_type` :: `factor()`\cr
+#' * `predict_type` :: `factor()`\cr
 #' This variable let define the quantity which should be used as a target. It has to be a character string
-#' out of this set: {"survival", "rmst", ...}.
-#' ...
+#' out of this set: {"survival", "rmst", ...}. Per default it is "survival", which takes the
+#' survival function as the target variable.
 #'
 #' @references
 #' `r format_bib("piller_2026")`
@@ -73,7 +73,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
     initialize = function(id = "trafotask_survregr_pv") {
       param_set = paradox::ps(
         tau = paradox::p_dbl(0),
-        # option: prediction_type as Hp to determine the type of target ?
+        # predict_type as Hp to determine the type of target ?
         predict_type = paradox::p_fct(levels = c("survival", "rmst")) # etc.))
       )
 
@@ -107,22 +107,22 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       predict_type = psv$predict_type
 
       # checks:
-      # checking if tau is really part of [0, t_max]:
+      # checks for tau (if tau is in set [0, T]):
       check_tau = checkmate::assertNumber(tau, null.ok = FALSE)
       max_event_time = max(task$unique_event_times())
       stopifnot(tau <= max_event_time)
 
-      # checking if predict_type is part of set:
+      # checks for predict_type:
       check_predict_type = checkmate::assertChoice(predict_type, c("survival", "rmst")) #, #etc.))
 
 
-      # calculate the censoring variable:
+      # setting the censoring variable:
       cut_times = times
       cut_times[cut_times > tau] = tau
 
-      # calculate pv:
+      # calculating pseudo-values:
 
-      # idea: determine type of target through prediction_type:
+      # idea: determine type of target through predict_type:
       if (identical(predict_type, "survival")) {
         pv <- pseudo::pseudosurv(times, status, tau)$pseudo
       }
@@ -158,7 +158,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
 
       checkmate::assertNumeric(tau_predict, null.ok = FALSE)
 
-      # setting new target: pv:
+      # setting pv as the new target:
       times = task$times()
       status = task$status()
       if (identical(predict_type_predict, "survival")) {
@@ -170,7 +170,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       # remove time and status target:
       data[[time_var]] = NULL
       data[[status_var]] = NULL
-      # add pseudo-values to original data:
+      # add pv to the original data:
       data[["pv"]] = pv
 
       # create regression task

@@ -5,7 +5,7 @@
 #' Transform [PredictionRegr][mlr3::PredictionRegr] to [PredictionSurv].
 #' As the PV-reduction directly uses the survival quantity for a regression task,
 #' the prediction out of the regression model can be used directly.
-#' TODO: QUELLE HINZUFÜGEN.
+#' See as reference: Piller et al. 2026. 
 #'
 #' @section Dictionary:
 #' This [PipeOp][mlr3pipelines::PipeOp] can be instantiated via the
@@ -19,15 +19,13 @@
 #'
 #' @section Input and Output Channels:
 #' The input is a [PredictionRegr][mlr3::PredictionRegr] and a
-#' [data.table][data.table::data.table] containing .... .
-#'
-#'
+#' [data.table][data.table::data.table] containing the transformed data.
 #' The output is the input [PredictionRegr][mlr3::PredictionRegr]
 #' transformed to a [PredictionSurv].
 #' Only works during prediction phase.
 #'
 #' @references
-#' `r format_bib("----")`
+#' `r format_bib("piller_2026")`
 #' @seealso
 #' @family Transformation PipeOps
 #' EVTL EXAMPLE CODE
@@ -57,29 +55,24 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
     }
   ),
 
-    # Überlegen, ob hier active function wirklich gebraucht wird (ist Predictiontype "crank" ? )
-    # active soll active prediction type von PipeOp wiedergeben !!!
-    # Prediction types: reponse; distr; lp; crank
-    active = list(
-      #'
-      #'
-      predict_type = function(rhs) {
-
-      }
-    ),
+   active = list(
+     #' @field predict_type (`character(1)`)\cr
+     #' Returns the active predict type of this PipeOp, which is `"crank"`
+     predict_type = function(rhs) {
+       if (!missing(rhs) && !identical(rhs, "crank")) stop("predict_type is read-only!")
+       "crank"
+     }
+   ),
 
     private = list(
       .predict = function(input) {
-        # TODO: MEHR NACHVOLLZIEHEN
-        # Input = Liste mit: RegressionPrediction und Data_test
-        pred = input[[1]] # Regression Prediction
-        data = input[[2]] # TestData
+        # Input = list with PredRegr and D_test
+        pred = input[[1]] # regression prediction
+        data = input[[2]] # testData
 
-        # TODO: CHECKEN; OB DAS SO STIMMT.
         # Überlegung: Pred gibt enviroment von PredictionRegr wieder
         # -> Field pv (da reponse variable) sollte exisiteren -->
         # damit lässt sich Matrix bilden, mit Spalte = t, Zeilen = pv.
-        # QUELLE NOCH HINZUFÜGEN FÜR DIESE Erklärung
         # PredictionSurv - help-side,
         surv = matrix(data = pred$pv, ncol = 1)
         colnames(surv) = data$tau
@@ -90,7 +83,6 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
           row_ids = data$row_ids(),
           true = Surv(data$times, data$status),
           distr = surv,
-        # lp = ?
         )
 
         list(p)
@@ -102,3 +94,5 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
       }
   )
 )
+
+# register_pipeop("trafopred_regrsurv_pv", PipeOpPredRegrSurvPV)
