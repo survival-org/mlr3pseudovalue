@@ -115,11 +115,6 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       # checks for predict_type:
       check_predict_type = checkmate::assertChoice(predict_type, c("survival", "rmst")) #, #etc.))
 
-
-      # setting the censoring variable:
-      cut_times = times
-      cut_times[cut_times > tau] = tau
-
       # calculating pseudo-values:
 
       # idea: determine type of target through predict_type:
@@ -136,6 +131,12 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       # remove time and status target:
       data[[time_var]] = NULL
       data[[cens_var]] = NULL
+      
+      # setting self$state:
+      self$state$tau = tau
+      self$state$survivor/km = ...
+      self$state$cumhazard = ....
+      self$state$mean = ...
 
       # create regression task:
       task_pv = TaskRegr$new(id = paste0(task$id, "_PV"), backend = data,
