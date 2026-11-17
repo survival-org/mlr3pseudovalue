@@ -143,11 +143,23 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       # Influence function (IF):
       # -> necessary to store it and apply it later on unseen D_test
       
-      IF <- function(t_i, status_i) {
+      pv_influence <- function(t_i, status_i) {
         d_na <- diff(c(0, na))
         risk_ind <- ifelse(summary(fit)$time[time_before_tau] <= t_i, 1, 0)
         count_process <- ifelse(summary(fit)$time[time_before_tau] == t_i & status_i == 1, 1, 0)
         1 + sum((risk_ind * d_na - count_process) / risk_ind_mean) 
+      }
+      
+      # Trying to get pv_influence operate on vector level:
+      
+      pv_influence <- function(times, status) {
+        d_na <- diff(c(0, na))
+        
+        vapply(seq(times), function(i) {
+          risk_ind <- ifelse(summary(fit)$time[time_before_tau] <= times[i], 1, 0)
+          count_process <- ifelse(summary(fit)$time[time_before_tau] == times[i] & status[i] == 1, 1, 0)
+          km * (1 + sum((risk_ind * d_na - count_process)/risk_ind_mean))
+        }, numeric(1))
       }
 
       # idea: determine type of target through predict_type:
@@ -177,7 +189,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       self$state$km = km
       self$state$na = na
       self$state$risk_ind_mean = risk_ind_mean
-      self$state$IF = IF()
+      # self$state$pv_influence = pv_influence()
       
       # create regression task:
       task_pv = TaskRegr$new(id = paste0(task$id, "_PV"), backend = data,
@@ -190,8 +202,11 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
     .predict = function(input) {
       task = input[[1L]]
       state = self$state
+      # TODO: GET pv_test !
+      
       # pv = pv_influence(state, task$times(), task$status())
-      IF = state$IF
+      pv_influence = state$pv_influence(task$times(), task$status())
+      # TODO: Fix pv_influence so that it is directly applyiable to time and status !
       km = state$km
       na = state$na
       risk_ind_mean = state$risk_ind_mean
@@ -200,7 +215,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       data = task$data()
       time_var = task$target_names[1]
       status_var = task$target_names[2]
-      psv_predict = self$param_set$values
+      # psv_predict = self$param_set$values
       # predict_type_predict = psv_predict$predict_type
 
       # checkmate::assertNumeric(tau, null.ok = FALSE)
@@ -224,13 +239,17 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       
       # calculate pv using the IF (influence function): 
       
-      pv <- km * mapply(IF, times, status)
+      # pv <- km * mapply(IF, times, status)
       # IF is applied to times[1], status[1] than: times[2], status[2] etc. 
       
       
       # add pv to the original data:
       data[["pv"]] = pv
 
+      if(identical(pv_test, "none")) {
+        data[["pv"]] = NA_real_
+      }
+      
       # create regression task
       task_regr = TaskRegr$new(id = paste0(task$id, "_PV"), backend = data,
                                target = "pv")
