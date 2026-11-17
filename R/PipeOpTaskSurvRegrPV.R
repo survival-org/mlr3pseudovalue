@@ -74,7 +74,8 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       param_set = paradox::ps(
         tau = paradox::p_dbl(0),
         # predict_type as Hp to determine the type of target ?
-        predict_type = paradox::p_fct(levels = c("survival", "rmst")) # etc.))
+        # predict_type = paradox::p_fct(levels = c("survival", "rmst")) # etc.))
+        pv_test = paradox::p_fct(levels = c("influence", "none"), default = "influence")
       )
 
       super$initialize(
@@ -104,7 +105,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       cens_var = task$target_names[2]
       psv = self$param_set$values
       tau = psv$tau
-      predict_type = psv$predict_type
+      # predict_type = psv$predict_type
 
       # checks:
       # checks for tau (if tau is in set [0, T]):
@@ -113,19 +114,58 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       stopifnot(tau <= max_event_time)
 
       # checks for predict_type:
-      check_predict_type = checkmate::assertChoice(predict_type, c("survival", "rmst")) #, #etc.))
+      # check_predict_type = checkmate::assertChoice(predict_type, c("survival", "rmst")) #, #etc.))
 
+      
       # calculating pseudo-values:
+      
+      fit <- survival::survfit(Surv(times, status) ~ 1, data = data)
+      sum_fit <- summary(fit)
+      
+      km <- summary(fit, time = tau)$surv
+      time_before_tau <- which(sum_fit$time <= tau)
+      na <- sum_fit$cumhaz[time_before_tau]
+      risk_ind_mean <- sum_fit$n.risk[time_before_tau] / sum_fit$n
+      
+      # count_proc <- matrx(0, ncol = length(time_before_tau), nrow = nrow(data))
+      # for (j in seq(length(time_before_tau))) {
+      #  for (i in seq(nrow(data))) {
+      #      count_proc[[ij]] <- ifelse(times[i] == time_before_tau[j] & status[i] == 1, 1, 0)
+      #  }
+      # }
+      
+      # count_proc <- outer(times, summary(fit)$time[time_before_tau], "==") *
+      #  as.numeric(status == c(rep(1, length(status))))
+      # checks for each time before tau if times is equal for each observation
+      # ncol = length(time_before_tau): For each time point 
+      # nrow = nrow(data): For each observation
+      
+      # Influence function (IF):
+      # -> necessary to store it and apply it later on unseen D_test
+      
+      IF <- function(t_i, status_i) {
+        d_na <- diff(c(0, na))
+        risk_ind <- ifelse(summary(fit)$time[time_before_tau] <= t_i, 1, 0)
+        count_process <- ifelse(summary(fit)$time[time_before_tau] == t_i & status_i == 1, 1, 0)
+        1 + sum((risk_ind * d_na - count_process) / risk_ind_mean) 
+      }
 
       # idea: determine type of target through predict_type:
-      if (identical(predict_type, "survival")) {
-        pv <- pseudo::pseudosurv(times, status, tau)$pseudo
-      }
-      if (identical(predict_type, "rmst")) {
-        pv <- pseudo::pseudomean(times, status, tau)
-      }
+      # if (identical(predict_type, "survival")) {
+      #   pv <- pseudo::pseudosurv(times, status, tau)$pseudo
+      # }
+      # if (identical(predict_type, "rmst")) {
+      #   pv <- pseudo::pseudomean(times, status, tau)
+      # }
       # etc.
 
+      # Take IJ instead of Jackknife: 
+      
+      # PV for D_train with IJ: 
+      pv <- eventglm::pseudo_infjack(Surv(times, status) ~ 1, time = tau, data = data,
+                                     # type = ...
+          )
+      
       # add pseudo-values to original data:
       data[["pv"]] = pv
       # remove time and status target:
@@ -134,43 +174,60 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       
       # setting self$state:
       self$state$tau = tau
-      self$state$survivor/km = ...
-      self$state$cumhazard = ....
-      self$state$mean = ...
-
+      self$state$km = km
+      self$state$na = na
+      self$state$risk_ind_mean = risk_ind_mean
+      self$state$IF = IF()
+      
       # create regression task:
       task_pv = TaskRegr$new(id = paste0(task$id, "_PV"), backend = data,
                              target = "pv")
 
-      # keep this in the state to show that pipeop was trained
-      self$state = list()
       # pass on regrtask
       list(task_pv, NULL)
   },
 
     .predict = function(input) {
       task = input[[1L]]
+      state = self$state
+      # pv = pv_influence(state, task$times(), task$status())
+      IF = state$IF
+      km = state$km
+      na = state$na
+      risk_ind_mean = state$risk_ind_mean
+      tau = state$tau
+      
       data = task$data()
       time_var = task$target_names[1]
       status_var = task$target_names[2]
       psv_predict = self$param_set$values
-      tau_predict = psv_predict$tau
-      predict_type_predict = psv_predict$predict_type
+      # predict_type_predict = psv_predict$predict_type
 
-      checkmate::assertNumeric(tau_predict, null.ok = FALSE)
-
-      # setting pv as the new target:
+      # checkmate::assertNumeric(tau, null.ok = FALSE)
+      
       times = task$times()
       status = task$status()
-      if (identical(predict_type_predict, "survival")) {
-        pv <- pseudo::pseudosurv(times, status, tau)$pseudo
-      }
-      if (identical(predict_type_predict, "rmst")) {
-        pv <- pseudo::pseudomean(times, status, tau)
-      }
+      
+      # setting pv as the new target
+      # if (identical(predict_type_predict, "survival")) {
+      #  pv <- pseudo::pseudosurv(times, status, tau)$pseudo
+      # }
+      # if (identical(predict_type_predict, "rmst")) {
+      #  pv <- pseudo::pseudomean(times, status, tau)
+      # }
+      
+      
       # remove time and status target:
+      
       data[[time_var]] = NULL
       data[[status_var]] = NULL
+      
+      # calculate pv using the IF (influence function): 
+      
+      pv <- km * mapply(IF, times, status)
+      # IF is applied to times[1], status[1] than: times[2], status[2] etc. 
+      
+      
       # add pv to the original data:
       data[["pv"]] = pv
 
@@ -183,7 +240,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
         row_ids = task$row_ids,
         times = task$times(),
         status = task$status(),
-        tau = tau_predict
+        # tau = tau
       )
       list(task_regr, data)
     }
