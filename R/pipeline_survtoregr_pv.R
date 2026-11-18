@@ -38,7 +38,7 @@ pipeline_survtoregr_pv <- function(learner, tau, predict_type, graph_learner = F
   assertNumber(tau, lower = 0)
   assertSubset(predict_type, c("survival", "cuminc", "rmean"))
   
-  # Creat graph instance:
+  # Create graph instance:
   gr = Graph$new()
   
   # Adding nodes to graph:

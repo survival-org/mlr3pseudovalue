@@ -43,8 +43,7 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
       input = data.table(
         name = c("input", "data"),
         train = c("NULL", "NULL"),
-        predict = c("PredictionRegr", "data.table")
-    #   TODO: NACHSCHAUEN, ob Prediction wirklich Liste ist oder doch ein Data Table !
+        predict = c("PredictionRegr", "list")
         ),
       output = data.table(
         name = "output",
@@ -68,21 +67,22 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
       .predict = function(input) {
         # Input = list with PredRegr and D_test
         pred = input[[1]] # regression prediction
-        data = input[[2]] # testData
+        data = input[[2]] # transformed Testdata
 
         # Überlegung: Pred gibt enviroment von PredictionRegr wieder
         # -> Field pv (da reponse variable) sollte exisiteren -->
         # damit lässt sich Matrix bilden, mit Spalte = t, Zeilen = pv.
         # PredictionSurv - help-side,
-        surv = matrix(data = pred$pv, ncol = 1)
-        colnames(surv) = data$tau
+        surv = matrix(data = pred$response, ncol = 1)
 
         # Prediction of Regression Task gives directly the prediction for
         # Survival Task
         p = PredictionSurv$new(
-          row_ids = data$row_ids(),
-          true = Surv(data$times, data$status),
-          distr = surv,
+          row_ids = pred$row_ids,
+          crank = surv,
+          truth = survival::Surv(data$times, data$status)
+          # truth is shown hideen ! not directly visable in the output !
+          # distr = surv,
         )
 
         list(p)
