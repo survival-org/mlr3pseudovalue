@@ -164,7 +164,24 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
           km * (1 + sum((risk_ind * d_na - count_process)/risk_ind_mean))
         }, numeric(1))
       }
+      
+      # Try to get faster version: 
+      
+      # pv_influence2 <- function(times, status) {
+      #  d_na <- diff(c(0, na))
+      #  risk_ind <- vector("numeric", length = length(d_na))
+      #  count_process <- vector("numeric", length = length(d_na))
+        
+      #  for(i in seq(times)) {
+      #    risk_ind[i] <- ifelse(summary(fit)$time[time_before_tau] <= times[i], 1, 0)
+      #    count_process[i] <- ifelse(summary(fit)$time[time_before_tau] == times[i] & status[i] == 1, 1, 0)
+      #  }
+          
+      #  km * (1 + sum((risk_ind * d_na - count_process)/risk_ind_mean))
+      #}
 
+      # Wouldnt be really faster due to two for loops 
+      
       # Take IJ instead of Jackknife: 
       
       # PV for D_train with IJ: 
