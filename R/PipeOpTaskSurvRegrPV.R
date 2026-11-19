@@ -124,6 +124,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       psv = self$param_set$values
       tau = psv$tau
       predict_type = psv$predict_type
+      pv_test = psv$pv_test
 
       # checks:
       # checks for tau (if tau is in set [0, T]):
@@ -182,7 +183,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       self$state$na = na
       self$state$risk_ind_mean = risk_ind_mean
       self$state$pv_influence = pv_influence
-      # self$state$pv_influence = pv_influence()
+      self$state$pv_test = pv_test
       
       # create regression task:
       task_pv = TaskRegr$new(id = paste0(task$id, "_PV"), backend = data,
@@ -196,15 +197,15 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       task = input[[1L]]
       state = self$state
       pv_influence = state$pv_influence
-      # TODO: Get pv_test
+      pv_test = state$pv_test
       
-      # pv = pv_influence(state, task$times(), task$status())
-      pv = pv_influence(task$times(), task$status())
-      # TODO: Fix pv_influence so that it is directly applyiable to time and status !
       km = state$km
       na = state$na
       risk_ind_mean = state$risk_ind_mean
       tau = state$tau
+      # pv = pv_influence(state, task$times(), task$status())
+      pv = pv_influence(task$times(), task$status())
+      # TODO: Fix pv_influence so that it is directly applyiable to time and status !
       
       data = task$data()
       time_var = task$target_names[1]
@@ -230,9 +231,9 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       
       if(identical(pv_test, "none")) {
         data[["pv"]] = NA_real_
+      } else {
+        data[["pv"]] = pv
       }
-      
-      data[["pv"]] = pv
       
       # create regression task
       task_regr = TaskRegr$new(id = paste0(task$id, "_PV"), backend = data,
