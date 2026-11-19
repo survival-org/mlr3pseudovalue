@@ -36,7 +36,6 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
   public = list(
     #' @description
     #' Creates a new instance of this [R6][R6::R6Class] class.
-    #' EVTL id parameter explain
     initialize = function(id = "trafopred_regrsurv_pv") {
       super$initialize(
       id = id,
@@ -65,9 +64,8 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
 
     private = list(
       .predict = function(input) {
-        # Input = list with PredRegr and D_test
-        pred = input[[1]] # regression prediction
-        data = input[[2]] # transformed Testdata
+        pred = input[[1]]
+        data = input[[2]]
 
         # Überlegung: Pred gibt enviroment von PredictionRegr wieder
         # -> Field pv (da reponse variable) sollte exisiteren -->
@@ -80,9 +78,9 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
         p = PredictionSurv$new(
           row_ids = pred$row_ids,
           crank = surv,
+          distr = surv,
           truth = survival::Surv(data$times, data$status)
-          # truth is shown hideen ! not directly visable in the output !
-          # distr = surv,
+          # truth is shown hidden ! not directly visible in the output !
         )
 
         list(p)
