@@ -67,10 +67,8 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
         pred = input[[1]]
         data = input[[2]]
 
-        # Überlegung: Pred gibt enviroment von PredictionRegr wieder
-        # -> Field pv (da reponse variable) sollte exisiteren -->
-        # damit lässt sich Matrix bilden, mit Spalte = t, Zeilen = pv.
-        # PredictionSurv - help-side,
+        # pred gives enviroment of PredictionRegr -> 
+        # pv should exist --> build matrix with reponse variable (pv). 
         surv = matrix(data = pred$response, ncol = 1)
 
         # Prediction of Regression Task gives directly the prediction for
@@ -80,7 +78,6 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
           crank = surv,
           distr = surv,
           truth = survival::Surv(data$times, data$status)
-          # truth is shown hidden ! not directly visible in the output !
         )
 
         list(p)
@@ -93,4 +90,4 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
   )
 )
 
-# register_pipeop("trafopred_regrsurv_pv", PipeOpPredRegrSurvPV)
+register_pipeop("trafopred_regrsurv_pv", PipeOpPredRegrSurvPV)

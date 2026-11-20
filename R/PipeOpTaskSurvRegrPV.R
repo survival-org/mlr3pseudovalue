@@ -59,21 +59,22 @@
 #'
 #' * `predict_type` :: `factor()`\cr
 #' This variable let define the quantity which should be used as a target. It has to be a character string
-#' out of this set: {"survival", "rmst", ...}. Per default it is "survival", which takes the
+#' out of this set: {"surv", "rmst", "pstate"}. Per default it is "surv", which takes the
 #' survival function as the target variable.
+#' This argumented is put inside the "`pseudo`" function from the packet "`survival`". 
 #'
 #' * `pv_test` :: `factor()`\cr
 #' Determines wheter the testset gets a pseudo-value target or not.
 #' Can take two values:
-#' `"influence"` (which is also the default): Builts the target from the stored influence function
-#' from .train().
-#' `"non"`: The regression target gets never read. The target "pv" is an all - NA target, with which
+#' `"influence"`: Builds the target from the stored influence function from .train().
+#' `"none"`: No additional calculation for the testset. The target "pv" is an all - NA target, with which
 #' a *TaskRegr* can still work. 
+#' Per default set to `"none"`.
 #'
 #'
 #' @references
 #' `r format_bib("piller_2026")`
-#' `r frormat_bin(...)`
+#' `r frormat_bib("overgaard_2017")`
 #'
 #' @seealso
 #' @family Transformation PipeOps
@@ -90,10 +91,8 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
     initialize = function(id = "trafotask_survregr_pv") {
       param_set = paradox::ps(
         tau = paradox::p_dbl(0),
-        # predict_type as Hp to determine the type of target ?
-        # predict_type = paradox::p_fct(levels = c("survival", "rmst")) # etc.))
-        predict_type = paradox::p_fct(levels = c("survival", "cuminc", "rmean")),
-        pv_test = paradox::p_fct(levels = c("influence", "none"), default = "influence")
+        predict_type = paradox::p_fct(levels = c("survival", "rmst", "pstate"), init = "survival"),
+        pv_test = paradox::p_fct(levels = c("influence", "none"), init = "none")
       )
 
       super$initialize(
@@ -144,14 +143,14 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       
       
       # Influence function (IF):
-      # -> necessary to store it and apply it later on unseen D_test
+      # -> necessary to store it and apply it later on unseen D_test if one want "pv" on D_test
       
-      pv_influence <- function(t_i, status_i) {
-        d_na <- diff(c(0, na))
-        risk_ind <- ifelse(summary(fit)$time[time_before_tau] <= t_i, 1, 0)
-        count_process <- ifelse(summary(fit)$time[time_before_tau] == t_i & status_i == 1, 1, 0)
-        1 + sum((risk_ind * d_na - count_process) / risk_ind_mean) 
-      }
+      # pv_influence <- function(t_i, status_i) {
+      #  d_na <- diff(c(0, na))
+      #  risk_ind <- ifelse(summary(fit)$time[time_before_tau] <= t_i, 1, 0)
+      #  count_process <- ifelse(summary(fit)$time[time_before_tau] == t_i & status_i == 1, 1, 0)
+      #  1 + sum((risk_ind * d_na - count_process) / risk_ind_mean) 
+      #}
       
       # Trying to get pv_influence operate on vector level:
       
@@ -185,8 +184,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       # Take IJ instead of Jackknife: 
       
       # PV for D_train with IJ: 
-      pv <- eventglm::pseudo_infjack(Surv(times, status) ~ 1, time = tau, data = data,
-                                     type = predict_type)
+      pv <- survival::pseudo(fit, times = tau, type = predict_type)
       
       # add pseudo-values to original data:
       data[["pv"]] = pv
@@ -213,44 +211,33 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
     .predict = function(input) {
       task = input[[1L]]
       state = self$state
-      pv_influence = state$pv_influence
+      tau = state$tau
       pv_test = state$pv_test
       
-      km = state$km
-      na = state$na
-      risk_ind_mean = state$risk_ind_mean
-      tau = state$tau
-      # pv = pv_influence(state, task$times(), task$status())
-      pv = pv_influence(task$times(), task$status())
-      # TODO: Fix pv_influence so that it is directly applyiable to time and status !
-      
+      if (identical(pv_test, "influence")) {
+        km = state$km
+        na = state$na
+        risk_ind_mean = state$risk_ind_mean
+        pv_influence = state$pv_influence
+        
+        # pv = pv_influence(state, task$times(), task$status())
+        pv = pv_influence(task$times(), task$status())
+      } else {
+        pv = NA_real_
+      }
+    
       data = task$data()
       time_var = task$target_names[1]
       status_var = task$target_names[2]
-
-      # checkmate::assertNumeric(tau, null.ok = FALSE)
-      
-      times = task$times()
-      status = task$status()
       
       # remove time and status target:
       
       data[[time_var]] = NULL
       data[[status_var]] = NULL
       
-      # calculate pv using the IF (influence function): 
-      
-      # pv <- km * mapply(IF, times, status)
-      # IF is applied to times[1], status[1] than: times[2], status[2] etc. 
-      
-      
       # add pv to the original data:
       
-      if(identical(pv_test, "none")) {
-        data[["pv"]] = NA_real_
-      } else {
-        data[["pv"]] = pv
-      }
+      data[["pv"]] = pv
       
       # create regression task
       task_regr = TaskRegr$new(id = paste0(task$id, "_PV"), backend = data,
@@ -260,12 +247,12 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       data = list(
         row_ids = task$row_ids,
         times = task$times(),
-        status = task$status()
-        # tau = tau
+        status = task$status(),
+        tau = tau
       )
       list(task_regr, data)
     }
   )
 )
 
-# register_pipeop("trafotask_survregr_pv", PipeOpTaskSurvRegrPV)
+register_pipeop("trafotask_survregr_pv", PipeOpTaskSurvRegrPV)
