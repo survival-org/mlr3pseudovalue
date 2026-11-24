@@ -3,9 +3,9 @@
 #'
 #' @description
 #' Transform [PredictionRegr][mlr3::PredictionRegr] to [PredictionSurv].
-#' As the PV-reduction directly uses the survival quantity for a regression task,
-#' the prediction out of the regression model can be used directly.
-#' See as reference: Piller et al. 2026. 
+#' For the *pv* reduction the prediction from the regression model already is one
+#' the survival scale. This makes it possible to directly use the prediction from 
+#' the regression model without needing to transform it back into the survival scale. 
 #'
 #' @section Dictionary:
 #' This [PipeOp][mlr3pipelines::PipeOp] can be instantiated via the

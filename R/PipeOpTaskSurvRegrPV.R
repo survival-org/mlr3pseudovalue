@@ -12,19 +12,22 @@
 #'
 #' \eqn{\theta_i} = n \times \eqn{\theta} - (n - 1) \times \eqn{\theta}^(-i)
 #'
-#' In order to calculate the pseudo values, the class uses the build-in functions from
-#' the package *pseudo*. Different functions for the different target variables exist
-#' in this package and are called within this Pipeoperation class.
-#' For more in-detail information on the *pseudo* package see:
-#' \url{https://CRAN.R-project.org/package=pseudo}.
+#' This is the classical jackknife approach. But, in order to enable the classical ml-workflow, the
+#' infinitesimal jackknife pseudo-values are used in this implementation.
 #' 
-#' In order to calculate the pseudo values on the trainingsset, the class uses the build-in
-#' function *pseudo_infjack()* from the R package *eventglm*. This function uses the
-#' infinitesimal jackknife approach to calculate the pseudo observations.
-#' ...
-#' For more in-detail information on the *eventglm* package see:
-#' \url{https://cran.r-project.org/web/packages/eventglm/index.html}
-#'
+#' During training, the class uses the build-in function *pseudo* from the package *survival*. 
+#' The functions work for different target variables, which is controlled through an argument.
+#' For more in-detail information on the *survival* package see:
+#' \url{https://cran.r-project.org/web/packages/survival/index.html}.
+#' Furthermore the influence function *pv_influence* and its necessary properties gets
+#' defined. 
+#' 
+#' In the prediction phase on the testset, two options exist, which are both controlled through
+#' the parameter *pv_test*. If *pv_test = none*, no *pv* for the testset gets calculated and instead
+#' a all-NA target gets put into the *RegrTask*.  If *pv_test = influence*, than *pv_influence* gets
+#' called during prediction and calculates the target *pv* which is put into the *RegrTask*. 
+#' The properties that are used for this calculation are the one calculated during training.
+#' 
 #' @section Dictionary:
 #' This [PipeOP][mlr3pipelines::PipeOP] can be instantiated via the
 #' [dictionary][mlr3misc::Dictionary] [mlr3pipelines::mlr_pipeops]
@@ -133,7 +136,7 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       
       # calculating pseudo-values:
       
-      fit <- survival::survfit(Surv(times, status) ~ 1, data = data)
+      fit <- survival::survfit(Surv(times, status) ~ 1)
       sum_fit <- summary(fit)
       
       km <- summary(fit, time = tau)$surv

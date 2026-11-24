@@ -7,20 +7,21 @@
 #' Regression learner to fit the transformed [TaskRegr][mlr3::TaskRegr].
 #' 
 #' @param tau (`numeric()`)\cr
-#' Predefined time point for PV. Observations with time larger than \eqn{\tau} are censored.
+#' Predefined time point for the *PV* reduction method. Observations with time larger than \eqn{\tau} are censored.
 #' Must be less or equal to the maximum event time.
 #' 
 #' @param predict_type (`character`)\cr
-#' Determinate the target variable. The parameter is directly used in the infinitesimal jackknife
+#' Determines the target variable \theta. The parameter is directly used in the infinitesimal jackknife
 #' calculation of *survival::pseudo()*. It has to be one of these three options:
-#' "`surv`", "`rmst`", "`pstate`". Is set to "`surv`" per default.
+#' "`surv`" (for the survival function), "`rmst`" (for the restricted mean survival time), "`pstate`"
+#' (for the cumulative incidence function) . Is set to "`surv`" per default.
 #' 
 #' @param pv_test (`character`)\cr
-#' Determinates wheter the pseudo-values gets calculated for the testset or not.
+#' Determines wheter the pseudo-values gets calculated for the testset or not.
 #' Has two options: "`none`" or "`influence`".
-#' `"influence"`: Builds the target from the stored influence function from .train().
-#' `"none"`: No additional calculation for the testset is done. The target "pv" is an all - NA target, with which
+#' `"none"`: No additional calculation for the testset is done. The target *pv* is an all-NA target, with which
 #' a *TaskRegr* can still work. 
+#' `"influence"`: Builds the target from the stored influence function from .train().
 #' Per default set to `"none"`.
 #' 
 #' 
@@ -33,9 +34,8 @@
 #'
 #' 1. [PipeOpTaskSurvRegrPV] Converts [TaskSurv] to a [TaskRegr][mlr3::TaskRegr].
 #' 2. A [LearnerRegr][mlr3::LearnerRegr] is fit and predicted on the new `TaskRegr`.
-#' 
 #' 3. [PipeOpPredRegrSurvPV] transforms the resulting [PredictionRegr][mlr3::PredictionRegr]
-#' to [PredictionSurv].(NOTWENDIG ?)
+#' to [PredictionSurv].
 #' 
 #' @references
 #' `r format_bib("piller_2026")`
