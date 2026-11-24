@@ -90,4 +90,5 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
   )
 )
 
-register_pipeop("trafopred_regrsurv_pv", PipeOpPredRegrSurvPV)
+# mlr_pipeops$add("trafopred_regrsurv_pv", PipeOpPredRegrSurvPV)
+# register_pipeop("trafopred_regrsurv_pv", PipeOpPredRegrSurvPV)

@@ -44,27 +44,96 @@
 #' # example code
 #' 
 #' 
-pipeline_survtoregr_pv <- function(learner, tau, predict_type = "surv", pv_test = "none", graph_learner = FALSE) {
+pipeline_survtoregr_pv <- function(learner, tau, predict_type = "survival", pv_test = "none", graph_learner = FALSE) {
   # Checking arguments:
   assert_learner(learner, task_type = "regr")
   checkmate::assertNumber(tau, lower = 0)
-  checkmate::assertSubset(predict_type, c("surv", "rmst", "pstate"))
+  checkmate::assertSubset(predict_type, c("survival", "rmst", "pstate"))
   checkmate::assertSubset(pv_test, c("none", "influence"))
   
   # Create graph instance:
   gr = Graph$new()
   
   # Add nodes to graph:
-  gr$add_pipeop(po("trafotask_survregr_pv", tau, predict_type, pv_test))
-  gr$add_pipeop(po(learner$id, learner))
+  gr$add_pipeop(po("trafotask_survregr_pv", tau = tau, predict_type = predict_type, pv_test = pv_test))
+  gr$add_pipeop(po("learner", learner))
   gr$add_pipeop(po("nop"))
   gr$add_pipeop(po("trafopred_regrsurv_pv"))
   
   # Add edges between the nodes:
-  gr$add_edge(src_id = "trafotask_survregr_pv", dst_id = learner$id, src_channel = "ouput", dst_channel = "input")
+  gr$add_edge(src_id = "trafotask_survregr_pv", dst_id = learner$id, src_channel = "output", dst_channel = "input")
   gr$add_edge(src_id = learner$id, dst_id = "trafopred_regrsurv_pv", src_channel = "output", dst_channel = "input")
   gr$add_edge(src_id = "trafotask_survregr_pv", dst_id = "nop", src_channel = "data", dst_channel = "input")
-  gr$add_edge(src_id = "nop", dst_id = "trafopred_regrsurv_pv", src_channel = "input", dst_channel = "data")
+  gr$add_edge(src_id = "nop", dst_id = "trafopred_regrsurv_pv", src_channel = "output", dst_channel = "data")
   
-  create_grlrn(gr, graph_learner)
+  # create_grlrn(gr, graph_learner)
+}
+
+# mlr_graphs$add("survtoregr_pv", pipeline_survtoregr_pv)
+# register_graph("survtoregr_pv", pipeline_survtoregr_pv)
+
+
+run_test = FALSE
+
+if(run_test) {
+
+# Example (will be added to description later):
+
+task = tsk("rats")
+part = partition(task)
+task_train = task$clone()$filter(part$train)
+task_test = task$clone()$filter(part$test)
+# learner = lrn("regr.rpart")
+
+grlrn = ppl(
+        "survtoregr_pv",
+        learner = lrn("regr.gam"),
+        tau = 50, 
+        graph_learner = TRUE
+)
+
+
+grlrn$train(task_train)
+pred = grlrn$predict(task_test)
+pred = pred$trafopred_regrsurv_pv.output
+
+grlrn
+pred
+
+grlrn$plot()
+
+tau = grlrn$state$trafotask_survregr_pv$tau
+
+pred$score(msr("surv.cindex"))
+pred$score(msr("surv.graf", times = tau, integrated = FALSE), task = task, train_set = part$train)
+
+
+
+# Random Forest Regression model: 
+
+library("randomForestSRC")
+
+grlrn = ppl(
+  "survtoregr_pv",
+  learner = lrn("regr.rfsrc"),
+  tau = 50, 
+  graph_learner = TRUE
+)
+
+
+grlrn$train(task_train)
+pred = grlrn$predict(task_test)
+pred = pred$trafopred_regrsurv_pv.output
+
+grlrn
+pred
+
+grlrn$plot()
+
+tau = grlrn$state$trafotask_survregr_pv$tau
+
+pred$score(msr("surv.cindex"))
+pred$score(msr("surv.graf", times = tau, integrated = FALSE), task = task, train_set = part$train)
+
+
 }

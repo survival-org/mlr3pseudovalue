@@ -255,4 +255,5 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
   )
 )
 
-register_pipeop("trafotask_survregr_pv", PipeOpTaskSurvRegrPV)
+# mlr_pipeops$add("trafotask_survregr_pv", PipeOpTaskSurvRegrPV)
+# register_pipeop("trafotask_survregr_pv", PipeOpTaskSurvRegrPV)
