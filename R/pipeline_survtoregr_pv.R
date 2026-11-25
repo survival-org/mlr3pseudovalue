@@ -79,10 +79,13 @@ if(run_test) {
 
 # Example (will be added to description later):
 
+
 task = tsk("rats")
 part = partition(task)
-task_train = task$clone()$filter(part$train)
-task_test = task$clone()$filter(part$test)
+# task_train = task$clone()$filter(part$train)
+# task_test = task$clone()$filter(part$test)
+task_train = task$filter(part$train)
+task_test = task$filter(part$test)
 # learner = lrn("regr.rpart")
 
 grlrn = ppl(
@@ -142,8 +145,13 @@ pred$score(msr("surv.graf", times = tau, integrated = FALSE), task = task, train
 task = tsk("rats")
 
 part = partition(task)
-task_train = task$clone()$filter(part$train)
-task_test = task$clone()$filter(part$test)
+# task_train = task$clone()$filter(part$train)
+# task_test = task$clone()$filter(part$test)
+task_train = task$filter(part$train)
+task_test = task$filter(part$test)
+
+
+## LM:
 
 pv_lm = ppl(
   "survtoregr_pv",
@@ -155,5 +163,86 @@ pv_lm = ppl(
 pv_lm
 
 pv_lm$train(task_train)
+
+lm_pred = pv_lm$predict(task_test)
+lm_pred
+
+lm_pred_values = lm_pred$trafopred_regrsurv_pv.output
+
+plot(lm_pred_values$crank)
+
+lm_pred_values$score(msr("surv.cindex"))
+
+
+## RSFRC:
+
+pv_rfsrc = ppl(
+  "survtoregr_pv",
+  learner = lrn("regr.rfsrc"),
+  tau = 40,
+  graph_learner = TRUE
+)
+
+pv_rfsrc$train(task_train)
+
+rfsrc_pred = pv_rfsrc$predict(task_test)
+rfsrc_pred
+
+rfsrc_pred_values = rfsrc_pred$trafopred_regrsurv_pv.output
+
+plot(rfsrc_pred_values$crank)
+
+
+rfsrc_pred_values$score(msr("surv.cindex"))
+
+
+# Comparison per plot:
+
+par(mfrow = c(1, 2))
+
+plot(lm_pred_values$crank)
+plot(rfsrc_pred_values$crank)
+
+# Comparison between crank & truth:
+
+par(mfrow = c(1, 2))
+
+plot(lm_pred_values$crank, ylim = c(0, 2))
+plot(lm_pred_values$truth)
+
+
+par(mfrow = c(1, 2))
+
+plot(rfsrc_pred_values$crank, ylim = c(0, 2))
+plot(rfsrc_pred_values$truth)
+
+
+
+## GAM:
+
+pv_gam = ppl(
+  "survtoregr_pv",
+  learner = lrn("regr.gam"),
+  tau = 100,
+  graph_learner = TRUE
+)
+
+pv_gam
+
+pv_gam$train(task_train)
+gam_pred = pv_gam$predict(task_test)
+
+gam_pred
+
+gam_pred_values = gam_pred$trafopred_regrsurv_pv.output
+
+gam_pred_values$score(msr("surv.cindex"))
+
+
+par(mfrow = c(1, 2))
+
+plot(gam_pred_values$crank, ylim = c(0, 2))
+plot(gam_pred_values$truth)
+
 
 }

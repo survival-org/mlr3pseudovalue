@@ -123,13 +123,12 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       # status = task$status()
       
       
-      cat("\n--- PIPEOP TRAIN START ---\n")
+      # cat("\n--- PIPEOP TRAIN START ---\n")
       
-      print(class(task))
-      print(task$target_names)
-      print(task$feature_names)
-      print(task$nrow)
-      
+      # print(class(task))
+      # print(task$target_names)
+      # print(task$feature_names)
+      # print(task$nrow)
       
       
       # surv_data = data.frame(times = times, status = status)
@@ -148,17 +147,19 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       
       # calculating pseudo-values:
       
-      cat("Times length:", length(task$times()), "\n")
-      cat("Status length:", length(task$status()), "\n")
+      # cat("Times length:", length(task$times()), "\n")
+      # cat("Status length:", length(task$status()), "\n")
       
-      fit <- survival::survfit(Surv(task$times(), task$status()) ~ 1)
-      sum_fit <- summary(fit)
+      surv_fit <- survival::survfit(Surv(task$times(), task$status()) ~ 1)
+      sum_fit <- summary(surv_fit)
       
-      cat("Task:", task$nrow, "\n")
-      cat("Fit n:", fit$n, "\n")
+      # cat("fit_call:", surv_fit$call, "\n")
+      # cat("fit_nrows:", nrow(fit$model), "\n")
+      # cat("Task:", task$nrow, "\n")
+      # cat("Fit n:", surv_fit$n, "\n")
       
       
-      km <- summary(fit, time = tau)$surv
+      km <- summary(surv_fit, time = tau)$surv
       time_before_tau <- which(sum_fit$time <= tau)
       na <- sum_fit$cumhaz[time_before_tau]
       risk_ind_mean <- sum_fit$n.risk[time_before_tau] / sum_fit$n
@@ -180,8 +181,8 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
         d_na <- diff(c(0, na))
         
         vapply(seq(t), function(i) {
-          risk_ind <- ifelse(summary(fit)$time[time_before_tau] <= t[i], 1, 0)
-          count_process <- ifelse(summary(fit)$time[time_before_tau] == t[i] & s[i] == 1, 1, 0)
+          risk_ind <- ifelse(summary(surv_fit)$time[time_before_tau] <= t[i], 1, 0)
+          count_process <- ifelse(summary(surv_fit)$time[time_before_tau] == t[i] & s[i] == 1, 1, 0)
           km * (1 + sum((risk_ind * d_na - count_process)/risk_ind_mean))
         }, numeric(1))
       }
@@ -206,13 +207,16 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       # Take IJ instead of Jackknife: 
       
       # PV for D_train with IJ: 
-      pv <- survival::pseudo(fit, times = tau, type = predict_type)
+      # pv_false <- survival::pseudo(surv_fit, times = tau, type = predict_type, collapse = FALSE)
+      pv <- survival::pseudo(surv_fit, times = tau, type = predict_type, collapse = TRUE)
       
       
-      cat("PV length:", length(pv), "\n")
-      cat("PV dimensions:", dim(pv), "\n")
-      cat("Tau:", tau, "\n")
-      cat("Predict type:", predict_type, "\n")
+      # cat("PV false length:", length(pv_false), "\n")
+      # cat("PV false dim:", dim(pv_false), "\n")
+      # cat("PV length:", length(pv), "\n")
+      # cat("PV dimensions:", dim(pv), "\n")
+      # cat("Tau:", tau, "\n")
+      # cat("Predict type:", predict_type, "\n")
       
       names(pv) <- NULL
       
