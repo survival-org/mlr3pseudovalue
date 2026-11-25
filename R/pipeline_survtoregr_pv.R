@@ -245,4 +245,32 @@ plot(gam_pred_values$crank, ylim = c(0, 2))
 plot(gam_pred_values$truth)
 
 
+
+## LM with pv_test = "influence":
+
+pv_lm_inf = ppl(
+  "survtoregr_pv",
+  learner = lrn("regr.lm"),
+  tau = 40,
+  pv_test = "influence",
+  graph_learner = TRUE
+)
+
+pv_lm_inf
+
+pv_lm_inf$train(task_train)
+
+lm_pred_inf = pv_lm_inf$predict(task_test)
+lm_pred_inf
+
+lm_pred_inf_values = lm_pred_inf$trafopred_regrsurv_pv.output
+
+plot(lm_pred_inf_values$crank)
+
+lm_pred_inf_values$score(msr("surv.cindex"))
+
+# lm_pred_values$score(msr("surv.cindex)) --> 0.32
+
+
+
 }
