@@ -207,6 +207,13 @@ PipeOpTaskSurvRegrPV = R6Class("PipeOpTaskSurvRegrPV",
       
       # PV for D_train with IJ: 
       pv <- survival::pseudo(fit, times = tau, type = predict_type)
+      
+      
+      cat("PV length:", length(pv), "\n")
+      cat("PV dimensions:", dim(pv), "\n")
+      cat("Tau:", tau, "\n")
+      cat("Predict type:", predict_type, "\n")
+      
       names(pv) <- NULL
       
       data = task$data()

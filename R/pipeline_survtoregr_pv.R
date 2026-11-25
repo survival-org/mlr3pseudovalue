@@ -135,24 +135,25 @@ tau = grlrn$state$trafotask_survregr_pv$tau
 pred$score(msr("surv.cindex"))
 pred$score(msr("surv.graf", times = tau, integrated = FALSE), task = task, train_set = part$train)
 
-}
 
 # Test on 25th november:
 
 
-task = tsk("gbcs")
+task = tsk("rats")
 
 part = partition(task)
 task_train = task$clone()$filter(part$train)
 task_test = task$clone()$filter(part$test)
 
-pv_red = ppl(
+pv_lm = ppl(
   "survtoregr_pv",
   learner = lrn("regr.lm"),
-  tau = 500,
+  tau = 40,
   graph_learner = TRUE
 )
 
-pv_red
+pv_lm
 
-pv_red$train(task_train)
+pv_lm$train(task_train)
+
+}
