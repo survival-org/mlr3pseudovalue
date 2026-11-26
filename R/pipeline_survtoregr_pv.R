@@ -272,5 +272,52 @@ lm_pred_inf_values$score(msr("surv.cindex"))
 # lm_pred_values$score(msr("surv.cindex)) --> 0.32
 
 
+## RFSRC with pv_test = "influence":
+
+pv_rfsrc_inf = ppl(
+  "survtoregr_pv",
+  learner = lrn("regr.rfsrc"),
+  tau = 40,
+  pv_test = "influence",
+  graph_learner = TRUE
+)
+
+pv_rfsrc_inf
+pv_rfsrc_inf$train(task_train)
+
+rfsrc_inf_pred = pv_rfsrc_inf$predict(task_test)
+rfsrc_inf_pred_values = rfsrc_inf_pred$trafopred_regrsurv_pv.output
+
+rfsrc_inf_pred_values$score(msr("surv.cindex"))
+
+
+par(mfrow = c(1, 2))
+
+plot(rfsrc_pred_values$crank)
+plot(rfsrc_inf_pred_values$crank)
+
+
+## GAM with pv_test = "influence":
+
+pv_gam_inf = ppl(
+  "survtoregr_pv",
+  learner = lrn("regr.gam"),
+  tau = 40,
+  graph_learner = TRUE
+)
+
+pv_gam_inf
+
+pv_gam_inf$train(task_train)
+
+gam_inf_pred = pv_gam_inf$predict(task_test)
+gam_inf_pred_values = gam_inf_pred$trafopred_regrsurv_pv.output
+
+par(mfrow = c(1, 2))
+
+plot(gam_pred_values$crank, ylim = c(0, 2))
+plot(gam_inf_pred_values$crank, ylim = c(0, 2))
+
+gam_inf_pred_values$score(msr("surv.cindex"))
 
 }
