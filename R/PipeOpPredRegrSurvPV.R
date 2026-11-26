@@ -3,9 +3,9 @@
 #'
 #' @description
 #' Transform [PredictionRegr][mlr3::PredictionRegr] to [PredictionSurv].
-#' As the PV-reduction directly uses the survival quantity for a regression task,
-#' the prediction out of the regression model can be used directly.
-#' See as reference: Piller et al. 2026. 
+#' For the *pv* reduction the prediction from the regression model already is one
+#' the survival scale. This makes it possible to directly use the prediction from 
+#' the regression model without needing to transform it back into the survival scale. 
 #'
 #' @section Dictionary:
 #' This [PipeOp][mlr3pipelines::PipeOp] can be instantiated via the
@@ -36,15 +36,13 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
   public = list(
     #' @description
     #' Creates a new instance of this [R6][R6::R6Class] class.
-    #' EVTL id parameter explain
     initialize = function(id = "trafopred_regrsurv_pv") {
       super$initialize(
       id = id,
       input = data.table(
         name = c("input", "data"),
         train = c("NULL", "NULL"),
-        predict = c("PredictionRegr", "data.table")
-    #   TODO: NACHSCHAUEN, ob Prediction wirklich Liste ist oder doch ein Data Table !
+        predict = c("PredictionRegr", "list")
         ),
       output = data.table(
         name = "output",
@@ -66,23 +64,20 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
 
     private = list(
       .predict = function(input) {
-        # Input = list with PredRegr and D_test
-        pred = input[[1]] # regression prediction
-        data = input[[2]] # testData
+        pred = input[[1]]
+        data = input[[2]]
 
-        # Überlegung: Pred gibt enviroment von PredictionRegr wieder
-        # -> Field pv (da reponse variable) sollte exisiteren -->
-        # damit lässt sich Matrix bilden, mit Spalte = t, Zeilen = pv.
-        # PredictionSurv - help-side,
-        surv = matrix(data = pred$pv, ncol = 1)
-        colnames(surv) = data$tau
+        # pred gives enviroment of PredictionRegr -> 
+        # pv should exist --> build matrix with reponse variable (pv). 
+        surv = matrix(data = pred$response, ncol = 1)
 
         # Prediction of Regression Task gives directly the prediction for
         # Survival Task
         p = PredictionSurv$new(
-          row_ids = data$row_ids(),
-          true = Surv(data$times, data$status),
+          row_ids = pred$row_ids,
+          crank = surv,
           distr = surv,
+          truth = survival::Surv(data$times, data$status)
         )
 
         list(p)
@@ -95,4 +90,5 @@ PipeOpPredRegrSurvPV <- R6Class("PipeOpPredRegrSurvPV",
   )
 )
 
+# mlr_pipeops$add("trafopred_regrsurv_pv", PipeOpPredRegrSurvPV)
 # register_pipeop("trafopred_regrsurv_pv", PipeOpPredRegrSurvPV)
